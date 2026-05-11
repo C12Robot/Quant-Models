@@ -117,6 +117,4 @@ def OnData(self, data):
 
 ## Links
 
-- [[Quant 1]] — main roadmap
-- [[Opening Range Breakout Strategy]] — strategy rules
 - QuantConnect docs: `QCAlgorithm` class reference

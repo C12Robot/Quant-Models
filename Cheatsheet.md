@@ -382,3 +382,45 @@ f"{value:.0f}"    # integer, no decimals
 |`for x in x`|variable name collision — use `for scenario in scenarios`|
 |`head()` without sorting|`sort_values().head(5)` — sort first|
 |`252/252` for ann. return|`252/trading_days` — use actual number of trading days|
+
+---
+
+## 19. Python Import Styles (Bayesian Theory)
+
+## Three Ways to Import
+
+```python
+# Option 1 — import specific function (BEST for single use)
+from scipy.stats import beta
+posterior = beta(15, 7)          # clean, no prefix
+
+# Option 2 — import module with alias (BEST for multiple functions)
+import scipy.stats as stats
+posterior = stats.beta(15, 7)   # clear origin, slightly verbose
+
+# Option 3 — import everything (NEVER use)
+from scipy.stats import *        # pollutes namespace, causes conflicts
+```
+
+## When to Use Which
+
+|Situation|Best Import|
+|---|---|
+|Using 1-2 functions from a library|`from lib import func`|
+|Using many functions from same library|`import lib as alias`|
+|Standard libraries (numpy, pandas)|`import numpy as np` (convention)|
+|Never|`from lib import *`|
+
+## Common Conventions
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import beta, norm   # specific functions
+from scipy import stats              # whole stats module
+```
+
+---
+

@@ -67,4 +67,3 @@ cummax() tracks the highest point reached so far. Drawdown measures how far belo
 
 > _Three metrics every backtest must report: return, max drawdown, Sharpe ratio. Return tells you how much you made. Max drawdown tells you how much pain you had to endure. Sharpe tells you if the return was worth the risk. A strategy with great returns but 50% drawdown is unusable for most investors — they'd panic sell at the bottom._
 
-[[Win Rate, Avg Trade Size & RR]]

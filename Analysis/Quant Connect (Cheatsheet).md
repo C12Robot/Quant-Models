@@ -241,3 +241,90 @@ def OnData(self, data: Slice):
 |No `IsWarmingUp` check|Add `if self.IsWarmingUp: return` at top of `OnData`|
 |`self.Log()` not showing|Check Logs tab, not Cloud Terminal — use `self.Debug()` instead|
 |`FutureChains` empty|Add `SetFilter()` to futures subscription|
+
+---
+
+## Universe Selection
+
+Universe selection lets you dynamically choose which assets to trade based on filters — instead of hardcoding specific tickers.
+
+```python
+def initialize(self):
+    self.UniverseSettings.Resolution = Resolution.Daily  # data resolution for universe
+    self.AddUniverse(self.SelectionFilter)               # register filter function
+    self.set_warm_up(100)
+
+def SelectionFilter(self, coarse):
+    # coarse = all US equities with basic data (price, volume)
+    sorted_vol = sorted(coarse, key=lambda x: x.DollarVolume, reverse=True)  # sort by volume
+    filtered = [x.Symbol for x in sorted_vol if x.Price > 50]               # filter price > $50
+    return filtered[:3]                                                        # top 3 by volume
+```
+
+**What each line does:**
+
+- `UniverseSettings.Resolution` — sets data resolution for all assets added by universe
+- `AddUniverse(fn)` — registers a filter function called daily to pick assets
+- `coarse` — list of all tradeable US equities with price + dollar volume data
+- `sorted(coarse, key=lambda x: x.DollarVolume, reverse=True)` — sort by volume, highest first
+- `x.Price > 50` — filter out penny stocks
+- `filtered[:3]` — take only top 3 (slice of list)
+
+---
+
+## OnSecuritiesChanged — React to Universe Changes
+
+Called automatically when assets enter or leave your universe.
+
+```python
+def OnSecuritiesChanged(self, changes):
+    self.changes = changes
+
+    # Assets added to universe → buy
+    for security in changes.AddedSecurities:
+        if not security.Invested:
+            self.SetHoldings(security.Symbol, 0.1)  # allocate 10% per stock
+
+    # Assets removed from universe → sell
+    for security in changes.RemovedSecurities:
+        if security.Invested:
+            self.Liquidate(security.Symbol)
+```
+
+|Part|What It Does|
+|---|---|
+|`changes.AddedSecurities`|Assets that just entered your universe this period|
+|`changes.RemovedSecurities`|Assets that just left your universe|
+|`security.Invested`|True if you currently hold this asset|
+|`SetHoldings(symbol, 0.1)`|Allocate 10% of portfolio to this asset|
+|`Liquidate(symbol)`|Sell all holdings of this asset|
+
+> **Why check `security.Invested` before buying/selling?** Prevents double-buying assets already held and avoids errors when liquidating positions you don't have.
+
+---
+
+## Universe vs Hardcoded Assets
+
+||Hardcoded|Universe Selection|
+|---|---|---|
+|Assets|Fixed tickers (`"SPY"`, `"QQQ"`)|Dynamic — changes daily|
+|Use case|Single strategy on known assets|Scan entire market for opportunities|
+|Setup|`self.AddEquity("SPY")`|`self.AddUniverse(filter_fn)`|
+|Rebalancing|Manual|Automatic via `OnSecuritiesChanged`|
+
+---
+
+## Common Universe Filters
+
+```python
+# Filter by dollar volume and price
+filtered = [x.Symbol for x in coarse if x.DollarVolume > 1e6 and x.Price > 10]
+
+# Top N by dollar volume
+return sorted_by_vol[:10]
+
+# Fine universe (fundamental data — earnings, PE ratio etc)
+# Requires AddUniverse(coarse_filter, fine_filter)
+def fine_filter(self, fine):
+    return [x.Symbol for x in fine if x.ValuationRatios.PERatio < 20]
+```
