@@ -1,3 +1,5 @@
 [[Compounding_Excersice_v1]]
 [[Bayesian Win Rate Analysis]]
 [[Hull_Combined_Compounding_Hedge_Bayesian_v1]]
+[[Poisson_Credit Risk_Duration_FRA_v1]]
+[[Hull Ch2-4 Comprehensive Practice]]
