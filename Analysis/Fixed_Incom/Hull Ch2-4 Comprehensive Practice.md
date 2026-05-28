@@ -148,8 +148,3 @@ Hedge is extremely tight — std of only $1,508 vs unhedged spread of ~$300,000.
 
 ---
 
-## Links
-
-- [[Hull Chapter 4 Part 5 Convexity Term Structure]]
-- [[Hull Ch4 Practice CreditRisk Duration FRA v1]]
-- [[Quant Formula Reference Sheet]]
