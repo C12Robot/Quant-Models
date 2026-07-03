@@ -1,2 +1,5 @@
-[[ES_Orb_Propfirm_Challenge_Simulator_v1]]
-[[Project 1 — ORB Strategy with Regime Filter]]
+[[orb_backtest.py]]
+[[Project 1 (ORB Backtest) README v2]]
+[[Dev Log (Project 1)]]
+[[Project1_montecarlo_max_drawdown_distribution_curve_v2.png]]
+[[Project1_equity_curve_v2.png]]
