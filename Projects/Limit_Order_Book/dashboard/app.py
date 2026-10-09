@@ -1,4 +1,5 @@
 import os
+import re
 
 import mysql.connector
 import pandas as pd
@@ -45,6 +46,22 @@ def run(sql, params=None, proc=False):
         conn.close()
 
 
+QUERIES_PATH = os.path.join(os.path.dirname(__file__), "..", "sql", "queries.sql")
+
+
+def load_report_queries():
+    """Parse sql/queries.sql into [(title, sql)]. One source of truth for the report."""
+    with open(QUERIES_PATH, encoding="utf-8") as fh:
+        text = fh.read()
+    out = []
+    for block in re.split(r"(?m)^-- (?=Q\d)", text)[1:]:
+        lines = block.split("\n")
+        title = lines[0].strip()
+        body = "\n".join(ln for ln in lines[1:] if not ln.lstrip().startswith("--")).strip()
+        out.append((title, body.rstrip(";")))
+    return out
+
+
 def flash_and_rerun(message):
     st.session_state["flash"] = message
     st.rerun()
@@ -56,8 +73,8 @@ st.title("Limit Order Book Dashboard")
 if "flash" in st.session_state:
     st.success(st.session_state.pop("flash"))
 
-tab_orders, tab_fills, tab_analytics, tab_manage = st.tabs(
-    ["Orders", "Fills", "Analytics", "Manage"]
+tab_orders, tab_fills, tab_analytics, tab_reports, tab_manage = st.tabs(
+    ["Orders", "Fills", "Analytics", "Reports", "Manage"]
 )
 
 # ---------------- Orders ----------------
@@ -86,6 +103,17 @@ with tab_analytics:
             "FROM fills GROUP BY price_ticks ORDER BY price_ticks"
         )
         st.bar_chart(by_price.set_index("price_ticks"))
+
+# ---------------- Reports ----------------
+with tab_reports:
+    st.caption("Each panel runs a query from sql/queries.sql")
+    for title, body in load_report_queries():
+        with st.expander(title, expanded=False):
+            st.code(body + ";", language="sql")
+            try:
+                st.dataframe(query(body), use_container_width=True, hide_index=True)
+            except Exception as e:
+                st.error(str(e))
 
 # ---------------- Manage ----------------
 with tab_manage:
@@ -137,5 +165,41 @@ with tab_manage:
         ok, msg = run("cancel_order", (int(cancel_id),), proc=True)
         if ok:
             flash_and_rerun(f"Order {int(cancel_id)} cancelled")
+        else:
+            st.error(msg)
+
+    st.divider()
+    st.subheader("Stop orders")
+    st.dataframe(
+        query("SELECT * FROM stop_orders_status ORDER BY stop_id DESC"),
+        use_container_width=True, hide_index=True,
+    )
+
+    next_stop = int(query(
+        "SELECT COALESCE(MAX(stop_id), 899999) + 1 AS n FROM stop_orders"
+    )["n"].iloc[0])
+
+    with st.form("add_stop"):
+        s1, s2, s3 = st.columns(3)
+        stop_id = s1.number_input("Stop ID", min_value=900000, value=next_stop, step=1)
+        stop_trader = s2.number_input("Trader ID", min_value=1, value=1, step=1, key="st_tr")
+        stop_instr = s3.number_input("Instrument ID", min_value=1, value=1, step=1, key="st_in")
+        s4, s5, s6, s7 = st.columns(4)
+        stop_side = s4.selectbox("Side", ["BUY", "SELL"], key="st_side")
+        trigger = s5.number_input("Trigger (ticks)", min_value=1, value=58020, step=1)
+        limit_p = s6.number_input("Limit (ticks)", min_value=1, value=58030, step=1)
+        stop_qty = s7.number_input("Quantity", min_value=1, value=1, step=1, key="st_q")
+        add_stop = st.form_submit_button("Add stop order")
+
+    if add_stop:
+        ok, msg = run(
+            "INSERT INTO stop_orders (stop_id, trader_id, instrument_id, side, "
+            "limit_price_ticks, trigger_price_ticks, quantity) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (int(stop_id), int(stop_trader), int(stop_instr), stop_side,
+             int(limit_p), int(trigger), int(stop_qty)),
+        )
+        if ok:
+            flash_and_rerun(f"Stop order {int(stop_id)} added (dormant)")
         else:
             st.error(msg)
